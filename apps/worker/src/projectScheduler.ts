@@ -1,12 +1,13 @@
 import {
   checkCollect,
-  createDb,
   closeDb,
+  createDb,
+  deliverDueReports,
   ensureCommercial,
   loadProjectStore,
   project as projectTable,
-  deliverDueReports,
 } from "@geo/db";
+import { getChannel } from "@geo/registry";
 import { enqueueAnalyzeProject } from "./analyzeQueue.js";
 import { queueMode } from "./queue.js";
 import { snapshotProjectCollect } from "./schedule.js";
@@ -70,7 +71,7 @@ export async function runProjectSchedulerTick(
     const quota = checkCollect(store);
     if (!quota.ok) continue;
     const channelIds = ensureCommercial(store).enabled_channel_ids.filter(
-      (channelId) => channelId !== "sim-0",
+      (channelId) => getChannel(channelId)?.surface === "api",
     );
     if (channelIds.length === 0) continue;
     const runDate = dateInTimezone(

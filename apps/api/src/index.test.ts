@@ -346,9 +346,20 @@ describe("API memory mode", () => {
 
     const catalog = await app.inject({ method: "GET", url: "/v1/channels" });
     expect(catalog.statusCode).toBe(200);
+    const catalogBody = catalog.json() as {
+      api_default: string[];
+      rows: {
+        id: string;
+        description: string;
+        collection: { route_note: string } | null;
+      }[];
+    };
+    expect(catalogBody.api_default.length).toBeGreaterThanOrEqual(3);
     expect(
-      (catalog.json() as { api_default: string[] }).api_default.length,
-    ).toBeGreaterThanOrEqual(3);
+      catalogBody.rows
+        .filter((row) => row.collection)
+        .every((row) => row.description === row.collection?.route_note),
+    ).toBe(true);
     const runtime = await app.inject({
       method: "GET",
       url: "/v1/adapters/runtime",

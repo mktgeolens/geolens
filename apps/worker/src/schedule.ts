@@ -1,13 +1,13 @@
 import { DEFAULT_API_CHANNELS } from "@geo/adapters";
-import { getChannel } from "@geo/registry";
 import type { DemoStore } from "@geo/db";
 import { analysisScopedActivePrompts } from "@geo/db";
+import { getChannel } from "@geo/registry";
 import {
   buildCollectPayload,
   type CollectChannelResult,
   type CollectJobPayload,
 } from "./collect.js";
-import { enqueueCollectJob, type EnqueueResult } from "./queue.js";
+import { type EnqueueResult, enqueueCollectJob } from "./queue.js";
 
 export interface ScheduleCollectOptions {
   runDate?: string;
@@ -58,8 +58,16 @@ export function snapshotProjectCollect(
     for (const prompt of active) {
       for (const channelId of channelIds) {
         const meta = getChannel(channelId);
+        if (meta?.surface !== "api") {
+          skipped.push({
+            prompt_id: prompt.id,
+            channel_id: channelId,
+            reason: "UNKNOWN_CHANNEL",
+          });
+          continue;
+        }
         if (
-          meta?.unsupportedCountryCodes.includes(
+          meta.unsupportedCountryCodes.includes(
             prompt.country_code.toUpperCase(),
           )
         ) {

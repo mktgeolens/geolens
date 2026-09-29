@@ -7,6 +7,7 @@ import {
   gdprExportProject,
   ingestBotVisit,
   pauseProject,
+  setEnabledChannels,
   setOrgPlan,
   unpauseProject,
 } from "./commercial.js";
@@ -75,5 +76,23 @@ describe("Phase 11 commercial", () => {
     gdprDeleteProjectData(store);
     expect(store.user.email).toMatch(/^deleted\+/);
     expect(store.chats.length).toBe(0);
+  });
+
+  it("rejects retired or unknown collection channels", async () => {
+    resetDemoStore();
+    const store = await getDemoStore();
+    store.commercial = {
+      enabled_channel_ids: ["perplexity-1"],
+      countries: ["IN"],
+      bot_visits_used: 0,
+      credits_total: null,
+      project_count: 1,
+    };
+    const decision = setEnabledChannels(store, [
+      "perplexity-1",
+      "google-ai-overviews",
+    ]);
+    expect(decision).toMatchObject({ ok: false, code: "unknown_channel" });
+    expect(store.commercial.enabled_channel_ids).toEqual(["perplexity-1"]);
   });
 });

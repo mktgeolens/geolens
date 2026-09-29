@@ -3,14 +3,14 @@ import { getDemoStore, resetDemoStore } from "@geo/db";
 import { describe, expect, it } from "vitest";
 import {
   collectJobKey,
+  processCollectJob,
   projectCollectionIsDue,
   resetInlineJobState,
   runCollectEnrichJob,
   runProjectCollectAndApply,
   scheduleProjectCollect,
-  snapshotProjectCollect,
   setCollectJobHandler,
-  processCollectJob,
+  snapshotProjectCollect,
 } from "./index.js";
 
 describe("runCollectEnrichJob", () => {
@@ -93,6 +93,26 @@ describe("job_key + schedule", () => {
 
     const snapshot = snapshotProjectCollect(store, { channelIds: ["openai-1"] });
     expect(snapshot.payloads.map((payload) => payload.prompt_id)).toEqual([scoped.id]);
+  });
+  it("skips retired and unknown channel ids before jobs are created", async () => {
+    resetDemoStore();
+    const store = await getDemoStore();
+    const snapshot = snapshotProjectCollect(store, {
+      channelIds: ["perplexity-1", "google-ai-mode", "openai-0"],
+      observationId: "unsupported-channel-test",
+    });
+    expect(snapshot.payloads.length).toBe(
+      store.prompts.filter((prompt) => prompt.status === "active").length,
+    );
+    expect(new Set(snapshot.payloads.map((payload) => payload.channel_id))).toEqual(
+      new Set(["perplexity-1"]),
+    );
+    expect(snapshot.skipped).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ channel_id: "google-ai-mode", reason: "UNKNOWN_CHANNEL" }),
+        expect.objectContaining({ channel_id: "openai-0", reason: "UNKNOWN_CHANNEL" }),
+      ]),
+    );
   });
   it("honors daily and weekly project collection frequency", () => {
     expect(

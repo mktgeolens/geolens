@@ -47,7 +47,7 @@ export const MODEL_CHANNELS: ModelChannel[] = [
   },
   {
     id: "openai-1",
-    description: "OpenAI Search API (GPT + web search)",
+    description: "OpenAI-family API channel",
     surface: "api",
     provider: "openai",
     currentModel: "gpt-web-search",
@@ -67,13 +67,17 @@ export const MODEL_CHANNELS: ModelChannel[] = [
   },
   {
     id: "perplexity-1",
-    description: "Perplexity Sonar API",
+    description: "Perplexity Agent API",
     surface: "api",
     provider: "perplexity",
-    currentModel: "sonar",
+    currentModel: "perplexity-agent-fast",
     versionHistory: [
-      { modelId: "sonar", effectiveFrom: "2025-01-01" },
-      { modelId: "sonar-pro", effectiveFrom: "2025-09-01", note: "optional upgrade" },
+      { modelId: "sonar", effectiveFrom: "2025-01-01", note: "retired" },
+      {
+        modelId: "perplexity-agent-fast",
+        effectiveFrom: "2026-09-25",
+        note: "Agent API fast preset; the provider-returned model is saved per answer",
+      },
     ],
     supportsFanouts: true,
     supportsAds: false,
@@ -82,8 +86,27 @@ export const MODEL_CHANNELS: ModelChannel[] = [
     geoCapability: "none",
   },
   {
+    id: "openrouter-free-1",
+    description: "OpenRouter Free Models Router API",
+    surface: "api",
+    provider: "openrouter",
+    currentModel: "openrouter/free",
+    versionHistory: [
+      {
+        modelId: "openrouter/free",
+        effectiveFrom: "2026-09-29",
+        note: "OpenRouter selects a compatible free model; the provider-returned model is saved per answer",
+      },
+    ],
+    supportsFanouts: false,
+    supportsAds: false,
+    supportsShopping: false,
+    unsupportedCountryCodes: [],
+    geoCapability: "none",
+  },
+  {
     id: "anthropic-1",
-    description: "Anthropic Messages API (web search)",
+    description: "Anthropic-family API channel",
     surface: "api",
     provider: "anthropic",
     currentModel: "claude-web-search",
@@ -98,7 +121,7 @@ export const MODEL_CHANNELS: ModelChannel[] = [
   },
   {
     id: "google-3",
-    description: "Google Gemini API (Search grounding)",
+    description: "Google-family API channel",
     surface: "api",
     provider: "google",
     currentModel: "gemini-grounded",
@@ -138,5 +161,5 @@ export const COUNTRIES = [
   { code: "AU", name: "Australia" },
 ] as const;
 
-export * from "./bots.js";
 export * from "./assistants.js";
+export * from "./bots.js";

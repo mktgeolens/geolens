@@ -27,4 +27,17 @@ describe("MCP Phase 10", () => {
       expect(mcp.data[i]!.mention_count).toBe(dash.rows[i]!.mention_count);
     }
   }, 60_000);
+
+  it("reports effective API routing without claiming consumer UI collection", async () => {
+    const routing = (await callMcpTool("channels.routing", {})) as {
+      policy: string;
+      runtime: { channels: { channel_id: string; route_note: string }[] };
+    };
+
+    expect(routing.policy).toMatch(/no channel represents a consumer UI/i);
+    expect(routing.runtime.channels.length).toBeGreaterThanOrEqual(4);
+    expect(
+      routing.runtime.channels.every((channel) => channel.route_note.length > 0),
+    ).toBe(true);
+  });
 });

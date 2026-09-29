@@ -11,10 +11,11 @@ import {
   canUseSso,
   computeProjectCredits,
   getPlan,
-  quotaSummary,
   type QuotaContext,
   type QuotaDecision,
+  quotaSummary,
 } from "@geo/core";
+import { getChannel } from "@geo/registry";
 import { newId } from "./schema.js";
 import type { DemoStore } from "./seed.js";
 
@@ -169,6 +170,16 @@ export function setEnabledChannels(
 ): QuotaDecision {
   const ctx = buildQuotaContext(store);
   const unique = [...new Set(channelIds)];
+  const unsupported = unique.filter(
+    (channelId) => getChannel(channelId)?.surface !== "api",
+  );
+  if (unsupported.length > 0) {
+    return {
+      ok: false,
+      code: "unknown_channel",
+      message: `Unsupported collection channel${unsupported.length === 1 ? "" : "s"}: ${unsupported.join(", ")}`,
+    };
+  }
   const adding = Math.max(0, unique.length - ctx.enabled_channels);
   if (adding > 0) {
     const d = canEnableChannel(ctx, adding);
@@ -491,4 +502,5 @@ export const SUBPROCESSORS = [
   { name: "Redis", purpose: "job queue" },
   { name: "LLM providers (OpenAI / Anthropic / Perplexity)", purpose: "collection when keys set" },
 ];
+
 import { uniqueActivePrompts } from "./promptIdentity.js";

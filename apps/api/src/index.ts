@@ -1073,20 +1073,25 @@ export async function buildServer(options?: { databaseUrl?: string }) {
       runtime.channels.map((c) => [c.channel_id, c]),
     );
     return {
-      rows: MODEL_CHANNELS.map((c) => ({
-        ...c,
-        health: health[c.id] ?? getChannelHealth(c.id),
-        has_adapter: (() => {
-          try {
-            getAdapter(c.id);
-            return true;
-          } catch {
-            return false;
-          }
-        })(),
-        adapter_mode: modeByChannel[c.id]?.mode ?? null,
-        key_present: modeByChannel[c.id]?.key_present ?? false,
-      })),
+      rows: MODEL_CHANNELS.map((c) => {
+        const collection = modeByChannel[c.id] ?? null;
+        return {
+          ...c,
+          description: collection?.route_note ?? c.description,
+          health: health[c.id] ?? getChannelHealth(c.id),
+          has_adapter: (() => {
+            try {
+              getAdapter(c.id);
+              return true;
+            } catch {
+              return false;
+            }
+          })(),
+          adapter_mode: collection?.mode ?? null,
+          key_present: collection?.key_present ?? false,
+          collection,
+        };
+      }),
       api_default: [...DEFAULT_API_CHANNELS],
       runtime,
       note: "surface_kind must be shown whenever collection method could change how a number is read.",
@@ -1134,6 +1139,9 @@ export async function buildServer(options?: { databaseUrl?: string }) {
     const store = await resolveProjectStore(db, projectId);
     if (!store) return reply.code(404).send({ error: "project_not_found" });
     const own = store.brands.find((b) => b.is_own);
+    const runtimeByChannel = Object.fromEntries(
+      describeAdapterRuntime().channels.map((row) => [row.channel_id, row]),
+    );
     const byChannel = new Map<
       string,
       { chats: number; ok: number; mentioned: number; surface_kind?: string }
@@ -1160,6 +1168,7 @@ export async function buildServer(options?: { databaseUrl?: string }) {
     }
     const rows = [...byChannel.entries()].map(([channel_id, v]) => {
       const meta = getChannel(channel_id);
+      const collection = runtimeByChannel[channel_id] ?? null;
       const observations = store.chats.filter((chat) => chat.model_channel_id === channel_id);
       const latestDate = observations.map((chat) => chat.run_date).sort().at(-1);
       const latest = observations.filter((chat) => chat.run_date === latestDate);
@@ -1171,13 +1180,14 @@ export async function buildServer(options?: { databaseUrl?: string }) {
       };
       return {
         channel_id,
-        description: meta?.description ?? channel_id,
+        description: collection?.route_note ?? meta?.description ?? channel_id,
         surface_kind: v.surface_kind ?? meta?.surface ?? "unknown",
         geo_capability: meta?.geoCapability ?? "none",
         chat_count: v.chats,
         visibility: v.ok === 0 ? 0 : v.mentioned / v.ok,
         health: persistedHealth,
         version_history: meta?.versionHistory ?? [],
+        collection,
       };
     });
     return {
@@ -1293,7 +1303,7 @@ export async function buildServer(options?: { databaseUrl?: string }) {
     if (body.text !== undefined && (typeof body.text !== "string" || !body.text.trim())) {
       return reply.code(400).send({ error: "text_required" });
     }
-    let row;
+    let row: Awaited<ReturnType<typeof updatePrompt>>;
     try {
       row = await updatePrompt(db, projectId, promptId, body);
     } catch (err) {
@@ -2504,7 +2514,7 @@ export async function buildServer(options?: { databaseUrl?: string }) {
       if (email !== demo.user.email.toLowerCase()) {
         return reply.code(401).send({ error: "sso_user_not_found" });
       }
-      const web = process.env.WEB_URL ?? "http://127.0.0.1:3000";
+      const web = process.env.WEB_URL ?? "http://127.0.0.1:3010";
       return reply.redirect(`${web}/${demo.project.id}/overview?sso=1`);
     }
     try {
@@ -2516,7 +2526,7 @@ export async function buildServer(options?: { databaseUrl?: string }) {
         secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 60 * 24 * 14,
       });
-      const web = process.env.WEB_URL ?? "http://127.0.0.1:3000";
+      const web = process.env.WEB_URL ?? "http://127.0.0.1:3010";
       const dest = result.project?.id ?? projectId;
       return reply.redirect(`${web}/${dest}/overview?sso=1`);
     } catch (err) {

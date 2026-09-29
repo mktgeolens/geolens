@@ -1,5 +1,9 @@
-import type { EngineAdapter, EngineRequest, EngineResponse } from "./types.js";
-import { SimulatorAdapter } from "./simulator/index.js";
+import { CursorRoutedAdapter, shouldUseCursor } from "./api/cursor.js";
+import { CHANNEL_PROVIDER_ROUTE } from "./api/fixtures.js";
+import {
+  OpenRouterRoutedAdapter,
+  shouldUseOpenRouter,
+} from "./api/openrouter.js";
 import {
   AnthropicApiAdapter,
   CopilotApiAdapter,
@@ -7,12 +11,8 @@ import {
   OpenAiApiAdapter,
   PerplexityApiAdapter,
 } from "./api/providers.js";
-import { CHANNEL_PROVIDER_ROUTE } from "./api/fixtures.js";
-import { CursorRoutedAdapter, shouldUseCursor } from "./api/cursor.js";
-import {
-  OpenRouterRoutedAdapter,
-  shouldUseOpenRouter,
-} from "./api/openrouter.js";
+import { SimulatorAdapter } from "./simulator/index.js";
+import type { EngineAdapter, EngineRequest, EngineResponse } from "./types.js";
 
 const cache = new Map<string, EngineAdapter>();
 
@@ -89,7 +89,9 @@ export function getAdapter(channelId: string): EngineAdapter {
       throw new Error(`no_adapter_for_channel:${channelId}`);
     }
     // Prefer OpenRouter (fast chat completions), then Cursor, then native vendor APIs
-    if (shouldUseOpenRouter(route.provider)) {
+    if (channelId === "openrouter-free-1") {
+      adapter = new OpenRouterRoutedAdapter(channelId, route.provider);
+    } else if (shouldUseOpenRouter(route.provider)) {
       adapter = new OpenRouterRoutedAdapter(channelId, route.provider);
     } else if (shouldUseCursor(route.provider)) {
       adapter = new CursorRoutedAdapter(channelId, route.provider);

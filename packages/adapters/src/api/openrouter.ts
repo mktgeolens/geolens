@@ -3,8 +3,8 @@ import type {
   EngineRequest,
   EngineResponse,
 } from "../types.js";
-import { collectionBackendForProvider, fixtureEngineResponse, resolveProviderMode } from "./fixtures.js";
 import type { ProviderId } from "./fixtures.js";
+import { collectionBackendForProvider, fixtureEngineResponse, resolveProviderMode } from "./fixtures.js";
 
 /**
  * Map GeoLens channels → OpenRouter model ids.
@@ -14,6 +14,9 @@ export function openRouterModelForChannel(
   channelId: string,
   env: Record<string, string | undefined> = process.env,
 ): string {
+  if (channelId === "openrouter-free-1") {
+    return env.OPENROUTER_MODEL_FREE ?? "openrouter/free";
+  }
   if (channelId.startsWith("openai") || channelId === "copilot-1") {
     return (
       env.OPENROUTER_MODEL_OPENAI ??
@@ -53,9 +56,16 @@ export function openRouterKeyPresent(
 /** Keep provider context limits from becoming unexpectedly large output budgets. */
 export function openRouterMaxTokens(
   env: Record<string, string | undefined> = process.env,
+  channelId?: string,
 ): number {
-  const configured = Number.parseInt(env.OPENROUTER_MAX_TOKENS ?? "1200", 10);
-  if (!Number.isFinite(configured)) return 1200;
+  const defaultBudget = channelId === "openrouter-free-1" ? 600 : 1200;
+  const configured = Number.parseInt(
+    channelId === "openrouter-free-1"
+      ? (env.OPENROUTER_FREE_MAX_TOKENS ?? String(defaultBudget))
+      : (env.OPENROUTER_MAX_TOKENS ?? String(defaultBudget)),
+    10,
+  );
+  if (!Number.isFinite(configured)) return defaultBudget;
   return Math.max(128, Math.min(configured, 4096));
 }
 
@@ -71,6 +81,7 @@ export function shouldUseOpenRouter(
 ): boolean {
   if (!openRouterKeyPresent(env)) return false;
   if (env.GEO_ADAPTER_MODE === "fixture") return false;
+  if (provider === "openrouter") return true;
   const backend = collectionBackendForProvider(provider, env);
   if (backend === "native" || backend === "cursor") return false;
   if (backend === "openrouter") return true;
@@ -197,7 +208,7 @@ export class OpenRouterRoutedAdapter implements EngineAdapter {
             { role: "user", content: `${req.prompt}\n\n(Market: ${countryLabel(req.countryCode)})` },
           ],
           temperature: 0.4,
-          max_tokens: openRouterMaxTokens(),
+          max_tokens: openRouterMaxTokens(process.env, this.channelId),
         }),
       });
 
@@ -223,6 +234,10 @@ export class OpenRouterRoutedAdapter implements EngineAdapter {
       }
 
       const text = extractMessageText(raw).trim();
+      const reportedModel =
+        typeof raw.model === "string" && raw.model.trim()
+          ? raw.model.trim()
+          : model;
       return {
         status: text ? "ok" : "empty",
         text,
@@ -235,13 +250,14 @@ export class OpenRouterRoutedAdapter implements EngineAdapter {
         raw: {
           live: true,
           via: "openrouter",
-          model,
+          requested_model: model,
+          reported_model: reportedModel,
           provider: this.provider,
           collection_note:
             "Routed via OpenRouter chat completions — multi-model text; not consumer AI-search UI.",
         },
         meta: {
-          modelReported: model,
+          modelReported: reportedModel,
           latencyMs: Date.now() - t0,
           surfaceKind: "api",
         },

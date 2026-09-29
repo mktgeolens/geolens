@@ -11,15 +11,22 @@ Living map: [`docs/CODE_GRAPH.md`](./docs/CODE_GRAPH.md) · ADRs in `docs/decisi
 ## Quick start
 
 ```bash
-docker compose up -d          # Postgres :5432 + Redis :6379
+docker compose up -d --build  # Full stack: web :3010, API :3001, worker, Postgres, Redis
+```
+
+Open http://localhost:3010. To run the application processes outside Docker instead:
+
+```bash
+docker compose up -d postgres redis
 pnpm install
 pnpm --filter @geo/db migrate
 pnpm seed                     # writes 90-day demo into Postgres when DATABASE_URL set
-pnpm --filter @geo/api dev    # :3001
-pnpm --filter @geo/web dev    # :3000
+pnpm --filter @geo/api dev    # uses PORT from .env (4100 in the local example)
+pnpm --filter @geo/worker worker
+pnpm --filter @geo/web dev    # :3010
 ```
 
-Open http://localhost:3000 → **Sign up** (creates org + project) or **Open demo project** (`prj_demo` after seed). Billing/quota: `/{projectId}/billing`.
+Then open http://localhost:3010 → **Sign up** (creates org + project) or **Open demo project** (`prj_demo` after seed). Billing/quota: `/{projectId}/billing`.
 
 ## Spec rules
 

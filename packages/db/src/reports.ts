@@ -1,8 +1,8 @@
-import { classifyBranding, compareBrandRank } from "@geo/core";
 import { createHash } from "node:crypto";
+import { classifyBranding, compareBrandRank } from "@geo/core";
+import { analysisScopedActivePrompts } from "./promptIdentity.js";
 import type { DemoStore } from "./seed.js";
 import { metricsFromStore } from "./seed.js";
-import { analysisScopedActivePrompts } from "./promptIdentity.js";
 
 /** Canonical brands report — dashboard, API, MCP, CSV must call this. */
 export function brandsReportPayload(store: DemoStore) {
@@ -393,7 +393,7 @@ export function overviewReportPayload(
     promptsByTopic.set(p.topic_id, list);
   }
   const ownBrandId = own?.brand_id;
-  let topicVisibilityIsProxy = false;
+  const topicVisibilityIsProxy = false;
   const scopedTopicIds = store.analysisScope?.topicIds;
   const reportTopics = scopedTopicIds
     ? store.topics.filter((topic) => scopedTopicIds.includes(topic.id))
@@ -575,7 +575,7 @@ export function overviewReportPayload(
     view.chats.length === 1 ? "" : "s"
   } (${eligibleAttemptCount} eligible answer${
     eligibleAttemptCount === 1 ? "" : "s"
-  }, ${failedAttemptCount} failed or blocked) across ${channelIds.size} configured route${
+  }, ${failedAttemptCount} failed or blocked) across ${channelIds.size} observed route${
     channelIds.size === 1 ? "" : "s"
   } in this project — not a multi-month industry index.`;
   const fixtureNote =
@@ -609,7 +609,17 @@ export function overviewReportPayload(
       label: "Observed presence",
       note: "The raw presence rate remains visible beside the composite score.",
     },
-    collection_health: [...new Set(view.chats.map((c) => c.model_channel_id))].map((channelId) => {
+    collection_health: [
+      ...new Set(
+        view.chats
+          .map((c) => c.model_channel_id)
+          .filter(
+            (channelId) =>
+              !store.commercial?.enabled_channel_ids?.length ||
+              store.commercial.enabled_channel_ids.includes(channelId),
+          ),
+      ),
+    ].map((channelId) => {
       const attempts = view.chats.filter((c) => c.model_channel_id === channelId);
       // A day can contain retries. Report the newest immutable observation for
       // each prompt so a successful recovery is not permanently shown as down.

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  channelSupportsCountry,
   getChannel,
   listApiChannels,
   MODEL_CHANNELS,
-  channelSupportsCountry,
 } from "./index.js";
 
 describe("MODEL_CHANNELS", () => {
@@ -19,7 +19,13 @@ describe("MODEL_CHANNELS", () => {
   it("lists only the API surfaces actually collected", () => {
     const api = listApiChannels();
     expect(api.map((c) => c.id).sort()).toEqual(
-      ["anthropic-1", "google-3", "openai-1", "perplexity-1"],
+      [
+        "anthropic-1",
+        "google-3",
+        "openai-1",
+        "openrouter-free-1",
+        "perplexity-1",
+      ],
     );
     expect(getChannel("google-ai-mode")).toBeUndefined();
     expect(getChannel("google-ai-overviews")).toBeUndefined();
@@ -27,7 +33,17 @@ describe("MODEL_CHANNELS", () => {
     for (const c of api) {
       expect(c.versionHistory.length).toBeGreaterThan(0);
       expect(c.geoCapability).toBeTruthy();
+      expect(c.description).not.toMatch(/consumer UI/i);
     }
+    expect(getChannel("perplexity-1")?.description).toBe(
+      "Perplexity Agent API",
+    );
+    expect(getChannel("perplexity-1")?.currentModel).toBe(
+      "perplexity-agent-fast",
+    );
+    expect(getChannel("openrouter-free-1")?.description).toBe(
+      "OpenRouter Free Models Router API",
+    );
   });
 
   it("respects unsupported countries", () => {

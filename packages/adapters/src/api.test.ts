@@ -1,25 +1,25 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   AnthropicApiAdapter,
   CHANNEL_PROVIDER_ROUTE,
-  DEFAULT_API_CHANNELS,
-  OpenAiApiAdapter,
-  PerplexityApiAdapter,
-  TokenBucket,
   clearAdapterCache,
+  DEFAULT_API_CHANNELS,
   describeAdapterRuntime,
   fixtureEngineResponse,
   getAdapter,
+  HttpStatusError,
   listBuiltAdapters,
   markChannelDown,
-  openRouterModelForChannel,
+  OpenAiApiAdapter,
   openRouterMaxTokens,
+  openRouterModelForChannel,
+  PerplexityApiAdapter,
   resetChannelHealth,
   resetRateLimiters,
   resolveProviderMode,
   shouldUseOpenRouter,
+  TokenBucket,
   withRetry,
-  HttpStatusError,
 } from "./index.js";
 
 describe("API-first Peec channel adapters", () => {
@@ -57,6 +57,9 @@ describe("API-first Peec channel adapters", () => {
     expect(CHANNEL_PROVIDER_ROUTE["anthropic-1"]?.provider).toBe("anthropic");
     expect(CHANNEL_PROVIDER_ROUTE["openai-1"]?.provider).toBe("openai");
     expect(CHANNEL_PROVIDER_ROUTE["google-3"]?.provider).toBe("google");
+    expect(CHANNEL_PROVIDER_ROUTE["openrouter-free-1"]?.provider).toBe(
+      "openrouter",
+    );
   });
 
   it("token bucket refuses when empty", () => {
@@ -160,6 +163,36 @@ describe("API-first Peec channel adapters", () => {
     expect(openRouterMaxTokens({ OPENROUTER_MAX_TOKENS: "32" })).toBe(128);
     expect(openRouterMaxTokens({ OPENROUTER_MAX_TOKENS: "9000" })).toBe(4096);
     expect(openRouterMaxTokens({ OPENROUTER_MAX_TOKENS: "invalid" })).toBe(1200);
+    expect(openRouterMaxTokens({}, "openrouter-free-1")).toBe(600);
+    expect(
+      openRouterMaxTokens(
+        { OPENROUTER_FREE_MAX_TOKENS: "480" },
+        "openrouter-free-1",
+      ),
+    ).toBe(480);
+  });
+
+  it("keeps the OpenRouter free router as a truthful distinct channel", () => {
+    expect(openRouterModelForChannel("openrouter-free-1", {})).toBe(
+      "openrouter/free",
+    );
+    expect(
+      shouldUseOpenRouter("openrouter", {
+        GEO_ADAPTER_MODE: "auto",
+        OPENROUTER_API_KEY: "sk-or-test",
+      }),
+    ).toBe(true);
+    const rt = describeAdapterRuntime({
+      GEO_ADAPTER_MODE: "auto",
+      OPENROUTER_API_KEY: "sk-or-test",
+    });
+    expect(
+      rt.channels.find((channel) => channel.channel_id === "openrouter-free-1"),
+    ).toMatchObject({
+      provider: "openrouter",
+      mode: "live",
+      via_openrouter: true,
+    });
   });
 
   it("describeAdapterRuntime never claims live without a key", () => {

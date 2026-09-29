@@ -344,7 +344,7 @@ export default async function OverviewPage({
       <header className="geo-vis-header">
         <div>
           <div className="geo-vis-title-row">
-            <h1>Visibility Overview</h1>
+            <h1>Visibility overview</h1>
             {indexBadge ? (
               <span className={indexBadge.className}>{indexBadge.label}</span>
             ) : null}
@@ -353,6 +353,13 @@ export default async function OverviewPage({
             How often collected API responses mention {brand ? brand.name : "your brand"}
             {projectDomain ? ` (${projectDomain})` : ""}.{ledeRank}
           </p>
+          {overview ? (
+            <p className="geo-vis-context">
+              <span>{overview.evidence.eligible_answers} eligible answers</span>
+              <span>{overview.honesty.channel_count ?? overview.channels.length} API channels</span>
+              {windowFrom && windowTo ? <span>{windowFrom}–{windowTo}</span> : null}
+            </p>
+          ) : null}
         </div>
         <div className="geo-vis-actions">
           <ExportOverviewButton projectId={projectId} />
@@ -382,12 +389,25 @@ export default async function OverviewPage({
       {overview && (
         <>
           {overview.collection_health?.some((channel) => channel.failures > 0) && (
-            <section className="geo-callout geo-callout-warning" style={{ marginBottom: "var(--space-4)" }} aria-label="Collection needs attention">
-              <h2 className="geo-section-title">Collection needs attention</h2>
-              {overview.collection_health.filter((channel) => channel.failures > 0).map((channel) => (
-                <p key={channel.channel_id}>{channel.channel_id}: {channel.eligible_answers}/{channel.attempts} answers collected on {channel.latest_date}. {channel.action}</p>
-              ))}
-              <Link href={`/${projectId}/chats`}>Review collection attempts</Link>
+            <section className="geo-collection-health" aria-label="Collection needs attention">
+              <div className="geo-collection-health-head">
+                <div>
+                  <span className="geo-badge geo-badge-warm">Partial collection</span>
+                  <h2>Collection needs attention</h2>
+                </div>
+                <Link href={`/${projectId}/chats`} className="geo-btn geo-btn-ghost geo-btn-sm">Review attempts</Link>
+              </div>
+              <ul>
+                {overview.collection_health.filter((channel) => channel.failures > 0).map((channel) => (
+                  <li key={channel.channel_id}>
+                    <div>
+                      <strong>{channel.channel_id}</strong>
+                      <span>{channel.eligible_answers}/{channel.attempts} answers · {channel.latest_date}</span>
+                    </div>
+                    <p>{channel.action}</p>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
           {overview.opportunity_state?.state === "not_mentioned" ? (
@@ -435,12 +455,13 @@ export default async function OverviewPage({
               </div>
             </section>
           ) : null}
-          <p className="geo-muted" style={{ marginBottom: "var(--space-4)" }}>
+          <p className="geo-vis-method-note">
             Overview measures {overview.prompt_cohort.score_prompts} active discovery prompts in the selected period.
             Branded and archived prompts are excluded. A zero means no brand mentions in eligible answers for this sample.
             {" "}<Link href={`/${projectId}/prompts`}>Review your prompt panel</Link>
             {" · "}<Link href={`/${projectId}/brands`}>View historical brand results</Link>
           </p>
+          <section className="geo-overview-hero" aria-label="Visibility score and collected trend">
           <div className="geo-vis-kpis">
             <article className="geo-vis-kpi">
               <div className="geo-vis-kpi-head">
@@ -482,10 +503,10 @@ export default async function OverviewPage({
           </div>
 
           <div className="geo-vis-grid-main">
-            <section className="geo-panel geo-vis-panel geo-vis-score-card">
+            <section className="geo-vis-panel geo-vis-score-card">
               <div className="geo-vis-panel-head">
                 <h2 className="geo-section-title" style={{ margin: 0 }}>
-                  Experimental GeoLens score
+                  Visibility score
                 </h2>
                 <span
                   className={`geo-badge ${
@@ -545,12 +566,13 @@ export default async function OverviewPage({
                   ? `Raw presence: ${overview.evidence.mentioned_answers}/${overview.evidence.eligible_answers} eligible answers (${pct(overview.evidence.observed_presence)}).`
                   : "No previous prompt version is reused."}
               </p>
-              <div className="geo-score-breakdown" aria-label="Score component breakdown">
+              <fieldset className="geo-score-breakdown">
+                <legend className="sr-only">Score component breakdown</legend>
                 <span><strong>{overview.score.components.presence}</strong> Presence · 55%</span>
                 <span><strong>{overview.score.components.share_of_voice}</strong> Share of voice · 25%</span>
                 <span><strong>{overview.score.components.position}</strong> Position support · 10%</span>
                 <span><strong>{overview.score.components.citation_support}</strong> Owned-domain citations · 10%</span>
-              </div>
+              </fieldset>
               <details className="geo-score-method">
                 <summary>How this score works</summary>
                 <p>{overview.score.methodology}</p>
@@ -567,10 +589,10 @@ export default async function OverviewPage({
               </details>
             </section>
 
-            <section className="geo-panel geo-vis-panel">
+            <section className="geo-vis-panel geo-vis-trend-card">
               <div className="geo-vis-panel-head">
                 <h2 className="geo-section-title" style={{ margin: 0 }}>
-                  Collected daily counts
+                  Evidence over time
                 </h2>
                 <span
                   className={`geo-badge ${
@@ -610,6 +632,7 @@ export default async function OverviewPage({
               )}
             </section>
           </div>
+          </section>
 
           <div className="geo-vis-grid-bottom">
             <section className="geo-panel geo-vis-panel">
@@ -702,7 +725,9 @@ export default async function OverviewPage({
             <section className="geo-panel geo-vis-panel">
               <div className="geo-vis-panel-head">
                 <h2 className="geo-section-title" style={{ margin: 0 }}>
-                  Observed tracked-brand mentions
+                  {overview.opportunity_state?.state === "not_mentioned"
+                    ? "Who appears instead"
+                    : "Observed tracked-brand mentions"}
                 </h2>
                 <span className="geo-badge geo-badge-neutral">
                   Presence in eligible answers

@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flatNavItems } from "./sidebar-nav";
 
 export function CommandPalette({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const items = useMemo(() => flatNavItems(projectId), [projectId]);
 
   useEffect(() => {
@@ -22,6 +23,10 @@ export function CommandPalette({ projectId }: { projectId: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
   const filtered = items.filter((i) => {
     const hay = `${i.label} ${i.group} ${i.href}`.toLowerCase();
@@ -52,31 +57,26 @@ export function CommandPalette({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(23,23,23,0.35)",
-        zIndex: 50,
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        paddingTop: "14vh",
-      }}
-      onClick={() => setOpen(false)}
-    >
-      <div
-        className="geo-panel"
+    <div className="geo-command-layer">
+      <button
+        type="button"
+        className="geo-command-dismiss"
+        onClick={() => setOpen(false)}
+        aria-label="Close page search"
+      />
+      <section
+        className="geo-panel geo-command-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search pages"
         style={{ width: "min(520px, 92vw)", overflow: "hidden", boxShadow: "var(--shadow-md)" }}
-        onClick={(e) => e.stopPropagation()}
       >
         <input
-          autoFocus
+          ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Jump to a page…"
+          aria-label="Search pages"
           className="geo-input"
           style={{
             border: 0,
@@ -96,24 +96,7 @@ export function CommandPalette({ projectId }: { projectId: string }) {
               <button
                 type="button"
                 onClick={() => go(item.href)}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  border: 0,
-                  background: "transparent",
-                  padding: "0.65rem 0.75rem",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f5f5f5";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
+                className="geo-command-result"
               >
                 <span style={{ fontWeight: 500 }}>{item.label}</span>
                 <span style={{ color: "var(--muted)", fontSize: 12 }}>{item.group}</span>
@@ -124,7 +107,7 @@ export function CommandPalette({ projectId }: { projectId: string }) {
             <li style={{ padding: 16, color: "var(--muted)", fontSize: 14 }}>No matches</li>
           )}
         </ul>
-      </div>
+      </section>
     </div>
   );
 }

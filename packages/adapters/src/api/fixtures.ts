@@ -28,6 +28,7 @@ function mulberry32(seed: number): () => number {
 
 export type ProviderId =
   | "openai"
+  | "openrouter"
   | "perplexity"
   | "anthropic"
   | "google"
@@ -261,6 +262,7 @@ export function providerKeyPresent(
   if (provider === "anthropic") return Boolean(env.ANTHROPIC_API_KEY);
   if (provider === "google")
     return Boolean(env.GOOGLE_API_KEY || env.GEMINI_API_KEY);
+  if (provider === "openrouter") return Boolean(env.OPENROUTER_API_KEY);
   // Copilot: optional Azure OpenAI; otherwise fixtures
   return Boolean(env.AZURE_OPENAI_API_KEY && env.AZURE_OPENAI_ENDPOINT);
 }
@@ -276,19 +278,23 @@ export const CHANNEL_PROVIDER_ROUTE: Record<
   },
   "openai-1": {
     provider: "openai",
-    note: "OpenAI Search / GPT web-search API.",
+    note: "Native OpenAI Responses API with web search; this is not the ChatGPT consumer UI.",
   },
   "perplexity-1": {
     provider: "perplexity",
-    note: "Perplexity Sonar API.",
+    note: "Perplexity Agent API using the fast preset; the provider-returned model is saved per answer. This is not the Perplexity consumer UI.",
+  },
+  "openrouter-free-1": {
+    provider: "openrouter",
+    note: "OpenRouter Free Models Router API. OpenRouter selects a compatible free model and the returned model identity is saved per answer; this is not a consumer UI.",
   },
   "anthropic-1": {
     provider: "anthropic",
-    note: "Claude channel → Anthropic Messages API + web search.",
+    note: "Native Anthropic Messages API with web search; this is not the Claude consumer UI.",
   },
   "google-3": {
     provider: "google",
-    note: "Gemini channel → Google Gemini API with Google Search grounding.",
+    note: "Native Google Gemini API with Google Search grounding; this is not the Gemini or Google Search consumer UI.",
   },
 };
 
@@ -298,6 +304,7 @@ export function describeAdapterRuntime(
 ) {
   const providers: ProviderId[] = [
     "openai",
+    "openrouter",
     "perplexity",
     "anthropic",
     "google",
@@ -322,7 +329,9 @@ export function describeAdapterRuntime(
         const missingNative = !nativeKeyPresent;
         const via_openrouter =
           Boolean(env.OPENROUTER_API_KEY) &&
-          (backend === "openrouter" || (backend === "auto" && missingNative)) &&
+          (route.provider === "openrouter" ||
+            backend === "openrouter" ||
+            (backend === "auto" && missingNative)) &&
           env.GEO_ADAPTER_MODE !== "fixture";
         const via_cursor =
           Boolean(env.CURSOR_API_KEY) &&
@@ -342,7 +351,9 @@ export function describeAdapterRuntime(
               : ("live" as const),
           surface_kind: "api" as const,
           route_note: via_openrouter
-            ? route.provider === "google"
+            ? route.provider === "openrouter"
+              ? route.note
+              : route.provider === "google"
               ? "OpenRouter chat completions using the configured Google-family model; this is not the native Gemini API, Google Search grounding, or a consumer UI."
               : `OpenRouter chat completions using the configured ${route.provider} model-family; this is not the native provider API or a consumer UI.`
             : via_cursor

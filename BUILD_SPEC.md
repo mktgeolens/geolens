@@ -2554,7 +2554,7 @@ The highest-risk dependencies are: keyword-volume data (Phase 3), LLM providers 
 | `google-2` | Gemini app | ui | `gemini-app` | yes | no | no |
 | `google-3` | Gemini API + Search grounding | api | `gemini-grounded` | partial | no | no |
 | `perplexity-0` | Perplexity UI | ui | `perplexity-ui` | yes | yes | yes |
-| `perplexity-1` | Perplexity Sonar API | api | `sonar` | partial | no | no |
+| `perplexity-1` | Perplexity Agent API | api | provider-reported | partial | no | no |
 | `microsoft-0` | Microsoft Copilot | ui | `copilot-ui` | yes | yes | yes |
 | `anthropic-0` | Claude UI | ui | `claude-ui` | partial | no | no |
 | `anthropic-1` | Claude API + web search | api | `claude-web-search` | partial | no | no |
@@ -2753,4 +2753,3 @@ The project is complete when all of the following are true:
 8. Cross-tenant access attempts return 404 across the full role × route matrix.
 9. Raw captures are retained and a documented command backfills any extraction fix over a date range.
 10. `docs/decisions/` records the choices this spec left open, including the §21.1 posture on UI collection.
-

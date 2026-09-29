@@ -74,7 +74,7 @@ export async function createCheckoutSession(
   }
   const id = newId("chk");
   const mode = billingMode();
-  const webBase = process.env.WEB_URL ?? "http://127.0.0.1:3000";
+  const webBase = process.env.WEB_URL ?? "http://127.0.0.1:3010";
   const success =
     opts?.success_url ??
     `${webBase}/${store.project.id}/billing?checkout=success&session=${id}`;

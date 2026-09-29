@@ -10,7 +10,7 @@ import {
   type DemoStore,
   type Db,
 } from "@geo/db";
-import { CHANNEL_PROVIDER_ROUTE } from "@geo/adapters";
+import { CHANNEL_PROVIDER_ROUTE, describeAdapterRuntime } from "@geo/adapters";
 
 export const MCP_TOOLS = [
   "reports.brands",
@@ -136,10 +136,12 @@ export async function callMcpTool(
   }
 
   if (name === "channels.routing") {
+    const runtime = describeAdapterRuntime();
     return {
       policy:
-        "API observations only: OpenAI Search API, Anthropic Messages API with web search, Gemini API with Search grounding, and Perplexity Sonar API.",
+        "API observations only. Effective providers, intermediaries, and model identities are reported from runtime routing and saved answer provenance; no channel represents a consumer UI.",
       routes: CHANNEL_PROVIDER_ROUTE,
+      runtime,
     };
   }
 
